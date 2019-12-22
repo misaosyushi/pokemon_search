@@ -25,7 +25,7 @@ export class PokemonSearchStack extends cdk.Stack {
       proxy: false
     });
 
-    const pokemon = api.root.addResource('{pokemon}')
+    const pokemon = api.root.addResource('pokemon')
 
     const responseModel = api.addModel('ResponseModel', {
       contentType: 'application/json',
@@ -33,13 +33,7 @@ export class PokemonSearchStack extends cdk.Stack {
       schema: {}
     });
 
-    const template: string = '{ "pokemon": "$input.params(\'pokemon\')" }'
-
-    pokemon.addMethod('GET', new apigw.LambdaIntegration(pokemonSearch, {
-      // 統合リクエストの設定
-      requestTemplates: {
-        'application/json': template
-      },
+    pokemon.addMethod('POST', new apigw.LambdaIntegration(pokemonSearch, {
       // 統合レスポンスの設定
       integrationResponses: [
         {
