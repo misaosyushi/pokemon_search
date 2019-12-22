@@ -8,11 +8,16 @@ export class PokemonSearchStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const tableName = 'PokemonTable';
+
     const pokemonSearch = new lambda.Function(this, 'PokemonSearchHandler', {
       runtime: lambda.Runtime.NODEJS_10_X,
       code: lambda.Code.fromAsset('lambda'),
       handler: 'index.handler',
-      timeout: Duration.seconds(30)
+      timeout: Duration.seconds(30),
+      environment:{
+        "TABLE_NAME": tableName
+      }
     });
 
     const api = new apigw.LambdaRestApi(this, 'PokemonSearchAPI', {
@@ -21,13 +26,54 @@ export class PokemonSearchStack extends cdk.Stack {
     });
 
     const pokemon = api.root.addResource('{pokemon}')
-    pokemon.addMethod('GET')
 
-    new dynamodb.Table(this, "PokemonTable", {
+    const responseModel = api.addModel('ResponseModel', {
+      contentType: 'application/json',
+      modelName: 'ResponseModel',
+      schema: {}
+    });
+
+    const template: string = '{ "pokemon": "$input.params(\'pokemon\')" }'
+
+    pokemon.addMethod('GET', new apigw.LambdaIntegration(pokemonSearch, {
+      // 統合リクエストの設定
+      requestTemplates: {
+        'application/json': template
+      },
+      // 統合レスポンスの設定
+      integrationResponses: [
+        {
+          statusCode: '200',
+          contentHandling: apigw.ContentHandling.CONVERT_TO_TEXT,
+          responseTemplates: {
+            'application/json': "$input.json('$')"
+          }
+        }
+      ],
+      passthroughBehavior: apigw.PassthroughBehavior.WHEN_NO_MATCH,
+      proxy: false
+    }),
+        // メソッドレスポンスの設定
+        {
+          methodResponses: [
+            {
+              statusCode: '200',
+              responseModels: {
+                'application/json': responseModel
+              }
+            }
+          ]
+        })
+
+    const table = new dynamodb.Table(this, "PokemonTable", {
+      tableName: tableName,
       partitionKey: {
         name: "id",
         type: dynamodb.AttributeType.STRING
       }
     });
+
+    // lambdaにDynamoDBの読み取り権限を付与
+    table.grantReadData(pokemonSearch)
   }
 }
