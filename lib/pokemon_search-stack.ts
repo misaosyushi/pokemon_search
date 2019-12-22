@@ -20,6 +20,16 @@ export class PokemonSearchStack extends cdk.Stack {
       }
     });
 
+    const putData = new lambda.Function(this, 'PutData', {
+      runtime: lambda.Runtime.NODEJS_10_X,
+      code: lambda.Code.fromAsset('putData'),
+      handler: 'index.handler',
+      timeout: Duration.seconds(30),
+      environment:{
+        "TABLE_NAME": tableName
+      }
+    });
+
     const api = new apigw.LambdaRestApi(this, 'PokemonSearchAPI', {
       handler: pokemonSearch,
       proxy: false
@@ -67,7 +77,8 @@ export class PokemonSearchStack extends cdk.Stack {
       }
     });
 
-    // lambdaにDynamoDBの読み取り権限を付与
+    // lambdaにDynamoDBの読み取り, 書き込み権限を付与
     table.grantReadData(pokemonSearch)
+    table.grantReadWriteData(putData)
   }
 }
