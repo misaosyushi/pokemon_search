@@ -16,7 +16,8 @@ export class PokemonSearchStack extends cdk.Stack {
       handler: 'index.handler',
       timeout: Duration.seconds(30),
       environment:{
-        "TABLE_NAME": tableName
+        "TABLE_NAME": tableName,
+        "CHANNEL_ACCESS_TOKEN": "change_me_later"
       }
     });
 
